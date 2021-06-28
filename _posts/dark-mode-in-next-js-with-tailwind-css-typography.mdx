@@ -1,0 +1,295 @@
+---
+path: nextjs-mdx-food-blog/tree/with-dark-mode
+coverImage: /assets/blog/nextjs-mdx-food-blog-with-dark-mode/cover.jpeg
+publishDate: '2021-05-30'
+updateDate: ''
+title: Dark Mode in Next.js with Tailwind CSS Typography
+description: In this tutorial, we will implement dark mode on a blog built with Next.js and Tailwind CSS. You can easily implement dark mode using Next Themes, but if you want to use the Tailwind CSS Typography plugin, you'll need to set up some configurations.
+author:
+  name: Koji Mochizuki
+  picture: /assets/blog/author/avatar.png
+---
+
+I usually use most applications in dark mode. I feel that dark mode is a lot less straining on the eyes than the default light mode. Dark mode is now one of the essential features of your site.
+
+In this tutorial, we will implement dark mode on a blog built with <CustomLink href="https://nextjs.org/" isBlank>Next.js</CustomLink> and <CustomLink href="https://tailwindcss.com/" isBlank>Tailwind CSS</CustomLink>. You can easily implement dark mode using <CustomLink href="https://github.com/pacocoursey/next-themes" isBlank>Next Themes</CustomLink>, but if you want to use the <CustomLink href="https://github.com/tailwindlabs/tailwindcss-typography" isBlank>Tailwind CSS Typography</CustomLink> plugin, you'll need to set up some configurations. Let's get started!
+
+## Demo
+
+<CustomLink href="https://www.jhrestaurant.com/" isBlank>
+  https://www.jhrestaurant.com/
+</CustomLink>
+
+## Create a Next.js App
+
+Here, we will use the previously created <CustomLink href="https://github.com/kjmczk/nextjs-mdx-food-blog/tree/simple" isBlank>NextJS MDX Food Blog (simple)</CustomLink>.
+
+## Install Dependencies
+
+For themes:
+
+```bash
+yarn add next-themes
+```
+
+For toggle switch:
+
+```bash
+yarn add react-switch react-icons
+```
+
+## Setup for using Next Themes
+
+Open `pages/_app.tsx` and add `Theme Provider`. This time we want to create a switch that allows you to manually toggle the themes without relying on the operating system preference, so change the `attribute` prop to `class`:
+
+```tsx
+// pages/_app.tsx
+import type { AppProps } from 'next/app';
+import { ThemeProvider } from 'next-themes';
+
+import 'tailwindcss/tailwind.css';
+
+const MyApp: React.FC<AppProps> = ({ Component, pageProps }: AppProps) => {
+  return (
+    <ThemeProvider attribute="class">
+      <Component {...pageProps} />
+    </ThemeProvider>
+  );
+};
+
+export default MyApp;
+```
+
+Now, switching to dark mode will set `class="dark"` on the `html` element.
+
+Also, set the `darkMode` option in `tailwind.config.js` to `class`:
+
+```js
+// tailwind.config.js
+module.exports = {
+  // ...
+  darkMode: 'class',
+  // ...
+};
+```
+
+Now dark mode is supported. Super easy, right?
+
+## Create Toggle Switch
+
+Next, let's create a switch for toggling the themes. You can easily create a toggle switch component using <CustomLink href="https://github.com/markusenglund/react-switch" isBlank>React Switch</CustomLink>.
+
+Create `components/theme-switch.tsx`:
+
+```tsx
+// components/theme-switch.tsx
+import { useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
+import Switch from 'react-switch';
+import { IconContext } from 'react-icons';
+import { FaMoon, FaSun } from 'react-icons/fa';
+
+const ThemeSwitch: React.FC = () => {
+  const { theme, setTheme } = useTheme();
+
+  const dark = theme === 'dark' ? true : false;
+
+  const [checked, setChecked] = useState(dark);
+  const [mounted, setMounted] = useState(false);
+
+  const handleChange = (nextChecked: boolean) => {
+    setChecked(nextChecked);
+  };
+
+  // When mounted on client, now we can show the UI
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    setTheme(checked ? 'dark' : 'light');
+  }, [checked, setTheme]);
+
+  if (!mounted) return null;
+
+  return (
+    <Switch
+      onChange={handleChange}
+      checked={checked}
+      aria-label="switch between day and night themes"
+      offColor="#555"
+      onHandleColor="#eee"
+      handleDiameter={20}
+      uncheckedIcon={
+        <div className="flex justify-center items-center h-full">
+          <IconContext.Provider
+            value={{
+              color: 'gold',
+              size: '80%',
+            }}
+          >
+            <FaSun />
+          </IconContext.Provider>
+        </div>
+      }
+      checkedIcon={
+        <div className="flex justify-center items-center h-full">
+          <IconContext.Provider
+            value={{
+              color: 'yellow',
+              size: '80%',
+            }}
+          >
+            <FaMoon />
+          </IconContext.Provider>
+        </div>
+      }
+      height={24}
+      width={48}
+    />
+  );
+};
+
+export default ThemeSwitch;
+```
+
+The `useTheme` hook allows your UI to know the current theme.
+
+```tsx
+const [mounted, setMounted] = useState(false);
+useEffect(() => setMounted(true), []);
+if (!mounted) return null;
+```
+
+See below for why you need these 3 lines of code: <CustomLink href="https://github.com/pacocoursey/next-themes#avoid-hydration-mismatch" isBlank>Avoid Hydration Mismatch</CustomLink>
+
+React Switch and <CustomLink href="https://github.com/react-icons/react-icons" isBlank>React Icons</CustomLink> are customizable, so give it a try to get your favorite design.
+
+## Add Switch to Header
+
+Open `components/Header.tsx` and add `<ThemeSwitch />`:
+
+```tsx
+// components/Header.tsx
+import ThemeSwitch from './theme-switch';
+
+const Header: React.FC = () => {
+  return (
+    <header className="py-2">
+      <div className="flex justify-between items-center">
+        ...
+        <ThemeSwitch />
+      </div>
+    </header>
+  );
+};
+```
+
+Now we can switch to dark mode. Let's give it a try in the browser:
+
+<LinkImage
+  src="/assets/blog/nextjs-mdx-food-blog-with-dark-mode/light-mode.png"
+  alt="Light Mode"
+/>
+
+<LinkImage
+  src="/assets/blog/nextjs-mdx-food-blog-with-dark-mode/dark-mode.png"
+  alt="Dark Mode"
+/>
+
+Great! It's almost perfect. But if you go to the content pages, you'll see that the text color hasn't switched in dark mode. If you are using the Tailwind CSS Typography plugin, you will need to add some config to `tailwind.config.js` file.
+
+Open `tailwind.config.js` and extend the `theme` and `variants` section:
+
+```js
+// tailwind.config.js
+module.exports = {
+  // ...
+  theme: {
+    extend: {
+      typography: (theme) => ({
+        dark: {
+          css: {
+            color: theme('colors.gray.300'),
+            h1: {
+              color: theme('colors.gray.100'),
+            },
+            h2: {
+              color: theme('colors.gray.100'),
+            },
+          },
+        },
+      }),
+    },
+  },
+  variants: {
+    extend: {
+      typography: ['dark'],
+    },
+  },
+  // ...
+};
+```
+
+Now we have a new `prose-dark` class and we can use it.
+
+Open `pages/posts/[slug].tsx` and add the class to `<article className="...">`:
+
+```tsx
+// pages/posts/[slug].tsx
+<article className="prose prose-green dark:prose-dark">
+```
+
+The `dark: {class}` classes are applied when the `dark` class is set in the `html` element.
+
+Let's take a look again in the browser:
+
+<LinkImage
+  src="/assets/blog/nextjs-mdx-food-blog-with-dark-mode/styled-content-page.png"
+  alt="Styled content page"
+/>
+
+It worked!
+
+## Bonus
+
+You might want to change some global styles. In that case, create a custom `Document` and add styles to the `<body>` tag:
+
+```tsx
+// pages/_document.tsx
+import Document, { Html, Head, Main, NextScript } from 'next/document';
+
+class MyDocument extends Document {
+  render(): React.ReactElement {
+    return (
+      <Html>
+        <Head />
+        <body className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+          <Main />
+          <NextScript />
+        </body>
+      </Html>
+    );
+  }
+}
+
+export default MyDocument;
+```
+
+All you have to do now is add styles for each element of each page as needed and override them. Let's change the text color of the description in dark mode on the Index page to be a little darker:
+
+```tsx
+// pages/index.tsx
+<p className="dark:text-gray-300">{post.description}</p>
+```
+
+<LinkImage
+  src="/assets/blog/nextjs-mdx-food-blog-with-dark-mode/changed-some-styles.png"
+  alt="Changed some styles"
+/>
+
+It might be hard to see the changes, but I think it looks better overall 👍
+
+## Conclusion
+
+In this tutorial, we implemented dark mode on a blog built with Next.js and Tailwind CSS (Typography). In the future, I will write about how to implement infinite scroll, internationalization, and search filter functionality. Stay tuned!
+
+The source code for this tutorial can be found on <CustomLink href="https://github.com/kjmczk/nextjs-mdx-food-blog/tree/with-dark-mode" isBlank>GitHub</CustomLink>.
